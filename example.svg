@@ -1,0 +1,249 @@
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" width="1200" height="210" onload="init(evt)" viewBox="0 0 1200 210" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink">
+<defs >
+	<linearGradient id="background" y1="0" y2="1" x1="0" x2="0" >
+		<stop stop-color="#eeeeee" offset="5%" />
+		<stop stop-color="#eeeeb0" offset="95%" />
+	</linearGradient>
+</defs>
+<style type="text/css">
+	.func_g:hover { stroke:black; stroke-width:0.5; cursor:pointer; }
+</style>
+<script type="text/ecmascript">
+<![CDATA[
+	var details, svg;
+	function init(evt) { 
+		details = document.getElementById("details").firstChild; 
+		svg = document.getElementsByTagName("svg")[0];
+	}
+	function s(info) { details.nodeValue = "Function: " + info; }
+	function c() { details.nodeValue = ' '; }
+	function find_child(parent, name, attr) {
+		var children = parent.childNodes;
+		for (var i=0; i<children.length;i++) {
+			if (children[i].tagName == name)
+				return (attr != undefined) ? children[i].attributes[attr].value : children[i];
+		}
+		return;
+	}
+	function orig_save(e, attr, val) {
+		if (e.attributes["_orig_"+attr] != undefined) return;
+		if (e.attributes[attr] == undefined) return;
+		if (val == undefined) val = e.attributes[attr].value;
+		e.setAttribute("_orig_"+attr, val);
+	}
+	function orig_load(e, attr) {
+		if (e.attributes["_orig_"+attr] == undefined) return;
+		e.attributes[attr].value = e.attributes["_orig_"+attr].value;
+		e.removeAttribute("_orig_"+attr);
+	}
+	function update_text(e) {
+		var r = find_child(e, "rect");
+		var t = find_child(e, "text");
+		var w = parseFloat(r.attributes["width"].value) -3;
+		var txt = find_child(e, "title").textContent.replace(/\([^(]*\)/,"");
+		t.attributes["x"].value = parseFloat(r.attributes["x"].value) +3;
+		
+		// Smaller than this size won't fit anything
+		if (w < 2*12*0.59) {
+			t.textContent = "";
+			return;
+		}
+		
+		t.textContent = txt;
+		// Fit in full text width
+		if (/^ *$/.test(txt) || t.getSubStringLength(0, txt.length) < w)
+			return;
+		
+		for (var x=txt.length-2; x>0; x--) {
+			if (t.getSubStringLength(0, x+2) <= w) { 
+				t.textContent = txt.substring(0,x) + "..";
+				return;
+			}
+		}
+		t.textContent = "";
+	}
+	function zoom_reset(e) {
+		if (e.attributes != undefined) {
+			orig_load(e, "x");
+			orig_load(e, "width");
+		}
+		if (e.childNodes == undefined) return;
+		for(var i=0, c=e.childNodes; i<c.length; i++) {
+			zoom_reset(c[i]);
+		}
+	}
+	function zoom_child(e, x, ratio) {
+		if (e.attributes != undefined) {
+			if (e.attributes["x"] != undefined) {
+				orig_save(e, "x");
+				e.attributes["x"].value = (parseFloat(e.attributes["x"].value) - x - 10) * ratio + 10;
+				if(e.tagName == "text") e.attributes["x"].value = find_child(e.parentNode, "rect", "x") + 3;
+			}
+			if (e.attributes["width"] != undefined) {
+				orig_save(e, "width");
+				e.attributes["width"].value = parseFloat(e.attributes["width"].value) * ratio;
+			}
+		}
+		
+		if (e.childNodes == undefined) return;
+		for(var i=0, c=e.childNodes; i<c.length; i++) {
+			zoom_child(c[i], x-10, ratio);
+		}
+	}
+	function zoom_parent(e) {
+		if (e.attributes) {
+			if (e.attributes["x"] != undefined) {
+				orig_save(e, "x");
+				e.attributes["x"].value = 10;
+			}
+			if (e.attributes["width"] != undefined) {
+				orig_save(e, "width");
+				e.attributes["width"].value = parseInt(svg.width.baseVal.value) - (10*2);
+			}
+		}
+		if (e.childNodes == undefined) return;
+		for(var i=0, c=e.childNodes; i<c.length; i++) {
+			zoom_parent(c[i]);
+		}
+	}
+	function zoom(node) { 
+		var attr = find_child(node, "rect").attributes;
+		var width = parseFloat(attr["width"].value);
+		var xmin = parseFloat(attr["x"].value);
+		var xmax = parseFloat(xmin + width);
+		var ymin = parseFloat(attr["y"].value);
+		var ratio = (svg.width.baseVal.value - 2*10) / width;
+		
+		// XXX: Workaround for JavaScript float issues (fix me)
+		var fudge = 0.0001;
+		
+		var unzoombtn = document.getElementById("unzoom");
+		unzoombtn.style["opacity"] = "1.0";
+		
+		var el = document.getElementsByTagName("g");
+		for(var i=0;i<el.length;i++){
+			var e = el[i];
+			var a = find_child(e, "rect").attributes;
+			var ex = parseFloat(a["x"].value);
+			var ew = parseFloat(a["width"].value);
+			// Is it an ancestor
+			if (0 == 0) {
+				var upstack = parseFloat(a["y"].value) > ymin;
+			} else {
+				var upstack = parseFloat(a["y"].value) < ymin;
+			}
+			if (upstack) {
+				// Direct ancestor
+				if (ex <= xmin && (ex+ew+fudge) >= xmax) {
+					e.style["opacity"] = "0.5";
+					zoom_parent(e);
+					e.onclick = function(e){unzoom(); zoom(this);};
+					update_text(e);
+				}
+				// not in current path
+				else
+					e.style["display"] = "none";
+			}
+			// Children maybe
+			else {
+				// no common path
+				if (ex < xmin || ex + fudge >= xmax) {
+					e.style["display"] = "none";
+				}
+				else {
+					zoom_child(e, xmin, ratio);
+					e.onclick = function(e){zoom(this);};
+					update_text(e);
+				}
+			}
+		}
+	}
+	function unzoom() {
+		var unzoombtn = document.getElementById("unzoom");
+		unzoombtn.style["opacity"] = "0.0";
+		
+		var el = document.getElementsByTagName("g");
+		for(i=0;i<el.length;i++) {
+			el[i].style["display"] = "block";
+			el[i].style["opacity"] = "1";
+			zoom_reset(el[i]);
+			update_text(el[i]);
+		}
+	}	
+]]>
+</script>
+<rect x="0.0" y="0" width="1200.0" height="210.0" fill="url(#background)"  />
+<text text-anchor="middle" x="600.00" y="24" font-size="17" font-family="Verdana" fill="rgb(0,0,0)"  >Flame Graph</text>
+<text text-anchor="" x="10.00" y="193" font-size="12" font-family="Verdana" fill="rgb(0,0,0)" id="details" > </text>
+<text text-anchor="" x="10.00" y="24" font-size="12" font-family="Verdana" fill="rgb(0,0,0)" id="unzoom" onclick="unzoom()" style="opacity:0.0;cursor:pointer" >Reset Zoom</text>
+<g class="func_g" onmouseover="s('Fiber:70303624221020 (27 ms, 100.13%)')" onmouseout="c()" onclick="zoom(this)">
+<title>Fiber:70303624221020 (27 ms, 100.13%)</title><rect x="10.0" y="129" width="1180.0" height="15.0" fill="rgb(214,125,8)" rx="2" ry="2" />
+<text text-anchor="" x="13.00" y="139.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >Fiber:70303624221020</text>
+</g>
+<g class="func_g" onmouseover="s('Object#run_primes (1) (27 ms, 100.13%)')" onmouseout="c()" onclick="zoom(this)">
+<title>Object#run_primes (1) (27 ms, 100.13%)</title><rect x="11.4" y="97" width="1178.6" height="15.0" fill="rgb(209,210,36)" rx="2" ry="2" />
+<text text-anchor="" x="14.40" y="107.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >Object#run_primes (1)</text>
+</g>
+<g class="func_g" onmouseover="s('Thread:70303615441860 (27 ms, 100.13%)')" onmouseout="c()" onclick="zoom(this)">
+<title>Thread:70303615441860 (27 ms, 100.13%)</title><rect x="10.0" y="145" width="1180.0" height="15.0" fill="rgb(248,190,45)" rx="2" ry="2" />
+<text text-anchor="" x="13.00" y="155.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >Thread:70303615441860</text>
+</g>
+<g class="func_g" onmouseover="s('Object#find_largest (1) (0 ms, 0.00%)')" onmouseout="c()" onclick="zoom(this)">
+<title>Object#find_largest (1) (0 ms, 0.00%)</title><rect x="11.8" y="81" width="3.0" height="15.0" fill="rgb(250,61,52)" rx="2" ry="2" />
+<text text-anchor="" x="14.84" y="91.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s('Kernel#respond_to_missing? (200) (0 ms, 0.00%)')" onmouseout="c()" onclick="zoom(this)">
+<title>Kernel#respond_to_missing? (200) (0 ms, 0.00%)</title><rect x="1182.6" y="33" width="7.2" height="15.0" fill="rgb(227,7,25)" rx="2" ry="2" />
+<text text-anchor="" x="1185.60" y="43.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s('Array#first (1) (0 ms, 0.00%)')" onmouseout="c()" onclick="zoom(this)">
+<title>Array#first (1) (0 ms, 0.00%)</title><rect x="12.4" y="65" width="0.1" height="15.0" fill="rgb(241,32,35)" rx="2" ry="2" />
+<text text-anchor="" x="15.36" y="75.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s('Kernel#rand (200) (0 ms, 0.00%)')" onmouseout="c()" onclick="zoom(this)">
+<title>Kernel#rand (200) (0 ms, 0.00%)</title><rect x="1170.4" y="49" width="19.4" height="15.0" fill="rgb(230,24,35)" rx="2" ry="2" />
+<text text-anchor="" x="1173.40" y="59.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s('Object#find_primes (1) (26 ms, 96.42%)')" onmouseout="c()" onclick="zoom(this)">
+<title>Object#find_primes (1) (26 ms, 96.42%)</title><rect x="14.8" y="81" width="1142.5" height="15.0" fill="rgb(251,108,5)" rx="2" ry="2" />
+<text text-anchor="" x="17.77" y="91.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >Object#find_primes (1)</text>
+</g>
+<g class="func_g" onmouseover="s('Array#select (1) (26 ms, 96.42%)')" onmouseout="c()" onclick="zoom(this)">
+<title>Array#select (1) (26 ms, 96.42%)</title><rect x="15.0" y="65" width="1142.3" height="15.0" fill="rgb(224,170,33)" rx="2" ry="2" />
+<text text-anchor="" x="18.03" y="75.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >Array#select (1)</text>
+</g>
+<g class="func_g" onmouseover="s('Array#each_index (1) (1 ms, 3.71%)')" onmouseout="c()" onclick="zoom(this)">
+<title>Array#each_index (1) (1 ms, 3.71%)</title><rect x="1157.5" y="65" width="32.3" height="15.0" fill="rgb(223,147,10)" rx="2" ry="2" />
+<text text-anchor="" x="1160.49" y="75.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >Ar..</text>
+</g>
+<g class="func_g" onmouseover="s('Class#new (1) (0 ms, 0.00%)')" onmouseout="c()" onclick="zoom(this)">
+<title>Class#new (1) (0 ms, 0.00%)</title><rect x="1189.8" y="65" width="0.2" height="15.0" fill="rgb(214,129,37)" rx="2" ry="2" />
+<text text-anchor="" x="1192.78" y="75.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s('Object#make_random_array (1) (1 ms, 3.71%)')" onmouseout="c()" onclick="zoom(this)">
+<title>Object#make_random_array (1) (1 ms, 3.71%)</title><rect x="1157.3" y="81" width="32.7" height="15.0" fill="rgb(238,46,41)" rx="2" ry="2" />
+<text text-anchor="" x="1160.27" y="91.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >Ob..</text>
+</g>
+<g class="func_g" onmouseover="s('Integer#upto (200) (25 ms, 92.71%)')" onmouseout="c()" onclick="zoom(this)">
+<title>Integer#upto (200) (25 ms, 92.71%)</title><rect x="46.9" y="33" width="1110.4" height="15.0" fill="rgb(213,32,29)" rx="2" ry="2" />
+<text text-anchor="" x="49.89" y="43.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >Integer#upto (200)</text>
+</g>
+<g class="func_g" onmouseover="s('Global#[No method] (1) (27 ms, 100.13%)')" onmouseout="c()" onclick="zoom(this)">
+<title>Global#[No method] (1) (27 ms, 100.13%)</title><rect x="10.0" y="113" width="1180.0" height="15.0" fill="rgb(213,132,43)" rx="2" ry="2" />
+<text text-anchor="" x="13.00" y="123.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >Global#[No method] (1)</text>
+</g>
+<g class="func_g" onmouseover="s('all (27 ms, 100%)')" onmouseout="c()" onclick="zoom(this)">
+<title>all (27 ms, 100%)</title><rect x="10.0" y="161" width="1180.0" height="15.0" fill="rgb(232,90,54)" rx="2" ry="2" />
+<text text-anchor="" x="13.00" y="171.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s('Integer#upto (1) (0 ms, 0.00%)')" onmouseout="c()" onclick="zoom(this)">
+<title>Integer#upto (1) (0 ms, 0.00%)</title><rect x="12.5" y="65" width="2.3" height="15.0" fill="rgb(243,8,16)" rx="2" ry="2" />
+<text text-anchor="" x="15.49" y="75.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  ></text>
+</g>
+<g class="func_g" onmouseover="s('Object#is_prime (200) (26 ms, 96.42%)')" onmouseout="c()" onclick="zoom(this)">
+<title>Object#is_prime (200) (26 ms, 96.42%)</title><rect x="26.2" y="49" width="1131.1" height="15.0" fill="rgb(243,54,53)" rx="2" ry="2" />
+<text text-anchor="" x="29.24" y="59.5" font-size="12" font-family="Verdana" fill="rgb(0,0,0)"  >Object#is_prime (200)</text>
+</g>
+</svg>
