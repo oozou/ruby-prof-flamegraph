@@ -16,11 +16,6 @@ The fold stack is usually generated from DTrace or Prof data using [stackcollaps
 I created this gem because I want to find out where the bottleneck is in [SlimWiki][]'s specs,
 but I don't know DTrace and just want the result quick.
 
-I did not expect this,
-but generating a company name from Faker causes 44 YAML files to be parsed,
-taking 28 seconds.
-
-(TODO include image)
 
 
 To learn more about Flame Graphs, check these out:
