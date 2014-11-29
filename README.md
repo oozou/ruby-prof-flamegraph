@@ -73,9 +73,90 @@ bundle exec ruby example.rb | \
 
 
 
-## Example
+## Output Format
 
-See the result in [example.svg][]
+Taken from [`flamegraph.pl`]:
 
-[example.svg]: example.svg
+> The input is stack frames and sample counts formatted as single lines.  Each
+> frame in the stack is semicolon separated, with a space and count at the end
+> of the line.
+
+Each line in the output looks like this:
+
+```
+Thread:ID;Fiber:ID;Class#method1 (call_count) time_taken_in_milliseconds
+```
+
+Here's an example:
+
+```
+Thread:123;Fiber:123;Capybara::Server#boot (1) 0.163681
+Thread:123;Fiber:123;Capybara::Server#boot (1);<Module::Capybara>#server (1) 0.099445
+Thread:123;Fiber:123;Capybara::Server#boot (1);<Module::Capybara>#server (1);Kernel#block_given? (1) 0.044838
+Thread:123;Fiber:123;Capybara::Server#boot (1);Proc#call (1) 0.019682
+Thread:123;Fiber:123;Capybara::Server#boot (1);Proc#call (1);<Module::Capybara>#run_default_server (1) 0.147611
+```
+
+The call count is included so that the number of calls is shown in the graph.
+
+
+### Post-Processing
+
+Sometimes, you may want to post process the data before passing it to `flamegraph.pl`, such as...
+
+- #### Removing the Thread and Fiber ID
+
+  Capybara spawns new WEBrick thread each time, putting each HTTP server instance in a different stack.
+  We can strip the Thread ID and Fiber ID from the output first:
+
+  ```ruby
+  processed = 0
+
+  while data = gets
+    data.gsub! %r{^Thread:\d+;Fiber:\d+;}, ''
+    puts data
+    processed += 1
+    if processed % 1000 == 0
+      $stderr.puts "Processed #{processed} lines"
+    end
+  end
+
+  $stderr.puts "Finished processing #{processed} lines"
+  ```
+
+  ```bash
+  ruby remove-thread-id.rb < profile.txt > profile2.txt
+  ```
+
+- #### Removing call counts
+
+  Sometimes, you may want to concatenate multiple profiles.
+  This causes the stack to separate based on the call count.
+  To put calls to same method on the same stack, the call count should be removed.
+
+  ```ruby
+  processed = 0
+
+  while data = gets
+    data.gsub! %r{\s\(\d+\);}, ';'
+    puts data
+    processed += 1
+    if processed % 1000 == 0
+      $stderr.puts "Processed #{processed} lines"
+    end
+  end
+
+  $stderr.puts "Finished processing #{processed} lines"
+  ```
+
+  ```bash
+  ruby remove-call-count.rb < profile2.txt > profile3.txt
+  ```
+
+
+I am relying on external scripts to do this processing for maximum flexibility
+(so that I always have the raw data to adjust it as needed).
+
+
+
 
