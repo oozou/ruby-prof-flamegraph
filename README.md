@@ -1,8 +1,18 @@
 ruby-prof-flamegraph
 ====================
 
-A [ruby-prof][] printer that outputs a fold stack file that's compatible with [FlameGraph][].
+Easily find the bottleneck in your Ruby app.
+
+RubyProf::FlameGraphPrinter is a [ruby-prof][] printer
+that outputs a fold stack file that's compatible with [FlameGraph][].
 It is created based on `RubyProf::CallStackPrinter`.
+
+The result can be passed to [FlameGraph][] to generate an interactive stack trace visualization
+(click on the image to see the demo).
+
+[Demo]: https://cdn.rawgit.com/oozou/ruby-prof-flamegraph/7ef5b567d9287d5de00d080e2b3abc2b05356e9f/example.svg
+
+[![Demo][Demo]][Demo]
 
 
 Awesomeness
