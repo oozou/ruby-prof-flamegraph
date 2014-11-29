@@ -45,17 +45,24 @@ gem 'ruby-prof-flamegraph'
 
 ## Usage
 
+
+### Obtaining the Fold Stack Trace
+
 Just `require 'ruby-prof-flamegraph` and use `RubyProf::FlameGraphPrinter` as your printer for ruby-prof.
 For vanilla ruby-prof, see [example.rb](example.rb).
 
 For rspec-prof, `RSpecProf.printer_class = RubyProf::FlameGraphPrinter`
 
-Then, to generate an image, pipe the output to `flamegraph.pl`. Here's how the example SVG is generated:
+
+### Generating the Image
+
+Then, to generate an image, pipe the output to [FlameGraph][]'s `flamegraph.pl`. Here's how the example SVG is generated:
 
 ```bash
 bundle exec ruby example.rb | \
     ~/GitHub/FlameGraph/flamegraph.pl --countname=ms --width=728 > example.svg
 ```
+
 
 [rspec-prof]: https://github.com/sinisterchipmunk/rspec-prof
 
