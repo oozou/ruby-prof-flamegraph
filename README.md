@@ -53,7 +53,7 @@ gem 'ruby-prof-flamegraph'
 
 ### Obtaining the Fold Stack Trace
 
-Just `require 'ruby-prof-flamegraph` and use `RubyProf::FlameGraphPrinter` as your printer for ruby-prof.
+Just `require 'ruby-prof-flamegraph'` and use `RubyProf::FlameGraphPrinter` as your printer for ruby-prof.
 For vanilla ruby-prof, see [example.rb](example.rb).
 
 For rspec-prof, `RSpecProf.printer_class = RubyProf::FlameGraphPrinter`
