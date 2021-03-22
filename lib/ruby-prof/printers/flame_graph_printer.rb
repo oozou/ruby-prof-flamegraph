@@ -7,8 +7,6 @@ module RubyProf
   #
   class FlameGraphPrinter < AbstractPrinter
 
-    VERSION = '0.3.0'
-
     def print(output = STDOUT, options = {})
       @output = output
       setup_options(options)

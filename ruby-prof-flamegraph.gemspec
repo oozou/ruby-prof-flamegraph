@@ -1,11 +1,7 @@
 # coding: utf-8
-lib = File.expand_path('../lib', __FILE__)
-$LOAD_PATH.unshift(lib) unless $LOAD_PATH.include?(lib)
-require 'ruby-prof-flamegraph'
-
 Gem::Specification.new do |spec|
   spec.name          = "ruby-prof-flamegraph"
-  spec.version       = RubyProf::FlameGraphPrinter::VERSION
+  spec.version       = '0.3.0'
   spec.authors       = ["Thai Pangsakulyanont"]
   spec.email         = ["org.yi.dttvb@gmail.com"]
   spec.summary       = %q{ruby-prof printer that exports to fold stacks compatible with FlameGraph}
@@ -16,7 +12,7 @@ Gem::Specification.new do |spec|
   spec.test_files    = spec.files.grep(%r{^(test|spec|features)/})
   spec.require_paths = ["lib"]
 
-  spec.add_development_dependency "bundler", "~> 1.7"
+  spec.add_development_dependency "bundler", [">= 1.7", "< 3.0"]
   spec.add_development_dependency "rake", "~> 10.0"
   spec.add_runtime_dependency "ruby-prof", ">= 0.13", "< 2"
 end
