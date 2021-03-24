@@ -8,46 +8,33 @@ module RubyProf
   class FlameGraphPrinter < AbstractPrinter
 
     def print(output = STDOUT, options = {})
-      @output = output
       setup_options(options)
 
-      @overall_threads_time = @result.threads.reduce(0) { |a, thread| a + thread.total_time }
-
       @result.threads.each do |thread|
-        @current_thread_id = thread.fiber_id
-        @overall_time = thread.total_time
+        overall_time = thread.total_time
         start = []
         start << "Thread:#{thread.id}"
         start << "Fiber:#{thread.fiber_id}" unless thread.id == thread.fiber_id
-        thread.methods.each do |m|
-          next unless m.root?
-          m.call_infos.each do |ci|
-            next unless ci.root?
-            print_stack start, ci
-          end
-        end
+        print_stack output, thread.call_tree, overall_time, start
       end
     end
 
     def min_time
       0
     end
-    
-    def print_stack(prefix, call_info)
 
-      total_time = call_info.total_time
-      percent_total = (total_time/@overall_time)*100
+    def print_stack(output, call_tree, overall_time, prefix)
+      total_time = call_tree.total_time
+      percent_total = (total_time/overall_time) * 100
       return unless percent_total > min_percent
       return unless total_time >= min_time
 
-      kids = call_info.children
-      current = prefix + [name(call_info)]
-      @output.puts "#{current.join(';')} #{number call_info.self_time * 1e3}"
+      current = prefix + [name(call_tree)]
+      output.puts "#{current.join(';')} #{number call_tree.self_time * 1e3}"
 
-      kids.each do |child|
-        print_stack current, child
+      call_tree.children.each do |child|
+        print_stack output, child, overall_time, current
       end
-
     end
 
     def name(call_info)
